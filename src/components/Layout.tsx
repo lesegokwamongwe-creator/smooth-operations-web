@@ -1,12 +1,15 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Menu, X, ChevronRight } from "lucide-react";
+import { Menu, X, ChevronRight, LogOut } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../lib/utils";
 import Logo from "./Logo";
+import { useAuth } from "../lib/AuthContext";
+import { logOut } from "../lib/firebase";
 
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -15,6 +18,8 @@ export default function Layout() {
     { name: "FAQ", path: "/faq" },
     { name: "Contact", path: "/contact" },
   ];
+
+  const isAdmin = user?.email === "lesegokwamongwe@gmail.com";
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
@@ -47,12 +52,35 @@ export default function Layout() {
                   {link.name}
                 </Link>
               ))}
-              <Link
-                to="/apply"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-medium transition-colors shadow-sm shadow-emerald-600/20 flex items-center gap-1"
-              >
-                Apply Now <ChevronRight className="w-4 h-4" />
-              </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className={cn(
+                    "text-sm font-medium transition-colors hover:text-emerald-600",
+                    location.pathname === "/admin"
+                      ? "text-emerald-600"
+                      : "text-slate-600"
+                  )}
+                >
+                  Admin
+                </Link>
+              )}
+              <div className="flex items-center gap-3 border-l border-slate-200 pl-8 ml-2">
+                {user && (
+                  <button
+                    onClick={logOut}
+                    className="text-sm font-medium text-slate-600 hover:text-red-600 transition-colors flex items-center gap-1"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+                )}
+                <Link
+                  to="/apply"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-medium transition-colors shadow-sm shadow-emerald-600/20 flex items-center gap-1"
+                >
+                  Apply Now <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
             </nav>
 
             {/* Mobile Menu Button */}
@@ -90,7 +118,32 @@ export default function Layout() {
                   {link.name}
                 </Link>
               ))}
-              <div className="pt-4 px-3">
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    "block px-3 py-3 rounded-md text-base font-medium",
+                    location.pathname === "/admin"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  )}
+                >
+                  Admin Dashboard
+                </Link>
+              )}
+              <div className="pt-4 px-3 space-y-3">
+                {user && (
+                  <button
+                    onClick={() => {
+                      logOut();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+                )}
                 <Link
                   to="/apply"
                   onClick={() => setIsMobileMenuOpen(false)}

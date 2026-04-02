@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "LoanApplication": {
+      "title": "Loan Application",
+      "description": "A user's application for a loan.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who submitted the application."
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "idNumber": {
+          "type": "string",
+          "description": "South African ID number (13 digits)."
+        },
+        "mobile": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "netIncome": {
+          "type": "number",
+          "description": "Monthly net income."
+        },
+        "loanAmount": {
+          "type": "number",
+          "description": "Requested loan amount."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Pending Review", "Approved", "Declined"],
+          "description": "Current status of the application."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of application (YYYY-MM-DD)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "bankName": {
+          "type": "string",
+          "description": "Name of the user's bank."
+        },
+        "accountNumber": {
+          "type": "string",
+          "description": "User's bank account number."
+        },
+        "accountType": {
+          "type": "string",
+          "description": "Type of the bank account (e.g., Savings, Cheque)."
+        },
+        "payslipData": {
+          "type": "string",
+          "description": "Base64 encoded string of the uploaded payslip."
+        },
+        "declineReason": {
+          "type": "string",
+          "description": "General reason for application rejection if status is Declined."
+        },
+        "repaymentDate": {
+          "type": "string",
+          "description": "Date when the loan repayment is due (YYYY-MM-DD)."
+        },
+        "repaymentAmount": {
+          "type": "number",
+          "description": "Total amount to be repaid."
+        },
+        "lastReminderSent": {
+          "type": "string",
+          "description": "Timestamp of the last reminder sent."
+        }
+      },
+      "required": [
+        "userId",
+        "firstName",
+        "lastName",
+        "idNumber",
+        "mobile",
+        "email",
+        "netIncome",
+        "loanAmount",
+        "status",
+        "date",
+        "createdAt",
+        "bankName",
+        "accountNumber",
+        "accountType",
+        "payslipData"
+      ]
+    }
+  },
+  "firestore": {
+    "/applications/{applicationId}": {
+      "schema": {
+        "$ref": "#/entities/LoanApplication"
+      },
+      "description": "Stores all loan applications."
+    }
+  }
+}

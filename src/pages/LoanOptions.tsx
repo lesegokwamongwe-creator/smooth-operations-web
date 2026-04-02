@@ -30,7 +30,7 @@ export default function LoanOptions() {
   const options = [
     {
       title: "Micro Loan",
-      amount: "R500 - R2,000",
+      amount: "R200 - R2,000",
       term: "31 Days",
       idealFor: "Unexpected minor expenses, groceries, or transport before payday.",
       features: [
@@ -101,7 +101,7 @@ export default function LoanOptions() {
                   </div>
                   <input 
                     type="range" 
-                    min="500" 
+                    min="200" 
                     max="5000" 
                     step="100"
                     value={amount}
@@ -109,7 +109,7 @@ export default function LoanOptions() {
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
                   <div className="flex justify-between text-xs text-slate-400 mt-2">
-                    <span>R 500</span>
+                    <span>R 200</span>
                     <span>R 5,000</span>
                   </div>
                 </div>

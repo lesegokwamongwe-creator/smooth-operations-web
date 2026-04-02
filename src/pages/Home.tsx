@@ -75,7 +75,7 @@ export default function Home() {
               {
                 icon: <ThumbsUp className="w-10 h-10 text-emerald-600" />,
                 title: "Fixed Terms",
-                description: "Borrow from R500 to R5,000. Repayment is due exactly 31 days from the date of your application."
+                description: "Borrow from R200 to R5,000. Repayment is due exactly 31 days from the date of your application."
               },
               {
                 icon: <ShieldCheck className="w-10 h-10 text-emerald-600" />,

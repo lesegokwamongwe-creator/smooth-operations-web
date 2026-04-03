@@ -97,6 +97,32 @@
         "accountType",
         "payslipData"
       ]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "A user's profile information.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
     }
   },
   "firestore": {
@@ -105,6 +131,12 @@
         "$ref": "#/entities/LoanApplication"
       },
       "description": "Stores all loan applications."
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profile information."
     }
   }
 }

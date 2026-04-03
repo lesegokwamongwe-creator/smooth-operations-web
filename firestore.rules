@@ -5,28 +5,14 @@ service cloud.firestore {
     // Assumed Data Model
     // ===============================================================
     //
-    // Collection: applications
-    // Document ID: [auto-generated]
+    // Collection: users
+    // Document ID: [userId]
     // Fields:
-    //   - userId: string (required, immutable) - The UID of the user
-    //   - firstName: string (required)
-    //   - lastName: string (required)
-    //   - idNumber: string (required, 13 chars)
-    //   - mobile: string (required)
-    //   - email: string (required, email format)
-    //   - netIncome: number (required, > 0)
-    //   - loanAmount: number (required, > 0)
-    //   - status: string (required, enum: 'Pending Review', 'Approved', 'Declined')
-    //   - date: string (required)
-    //   - createdAt: timestamp (required, immutable)
-    //   - bankName: string (required)
-    //   - accountNumber: string (required)
-    //   - accountType: string (required)
-    //   - payslipData: string (required, base64)
-    //   - declineReason: string (optional)
-    //   - repaymentDate: string (optional)
-    //   - repaymentAmount: number (optional)
-    //   - lastReminderSent: string (optional)
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - role: string (required, enum: 'user', 'admin')
+    //   - createdAt: timestamp (required)
     //
     // ===============================================================
 
@@ -38,7 +24,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.email == "lesegokwamongwe@gmail.com";
+      return isAuthenticated() && 
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email == "lesegokwamongwe@gmail.com" && request.auth.token.email_verified == true));
     }
 
     function isOwner(userId) {
@@ -59,6 +48,14 @@ service cloud.firestore {
 
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['user', 'admin'] &&
+             data.createdAt is timestamp;
     }
 
     function isValidApplication(data) {
@@ -83,6 +80,15 @@ service cloud.firestore {
              (!('repaymentDate' in data) || (data.repaymentDate is string && data.repaymentDate.size() < 20)) &&
              (!('repaymentAmount' in data) || (data.repaymentAmount is number && data.repaymentAmount > 0)) &&
              (!('lastReminderSent' in data) || (data.lastReminderSent is string && data.lastReminderSent.size() < 50));
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == 'user' || 
+                     (request.resource.data.role == 'admin' && request.auth.token.email == "lesegokwamongwe@gmail.com" && request.auth.token.email_verified == true));
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data)) || isAdmin();
+      allow delete: if false;
     }
 
     match /applications/{applicationId} {

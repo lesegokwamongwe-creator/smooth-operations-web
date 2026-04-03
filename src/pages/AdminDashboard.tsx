@@ -7,7 +7,7 @@ import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Ca
 import { motion } from "motion/react";
 
 export default function AdminDashboard() {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
   const [applications, setApplications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,15 +18,15 @@ export default function AdminDashboard() {
   const [repaymentAmount, setRepaymentAmount] = useState("");
   const [activeTab, setActiveTab] = useState<'applications' | 'reminders'>('applications');
 
-  const isAdmin = user?.email === "lesegokwamongwe@gmail.com";
+  const isAdmin = role === 'admin';
 
   useEffect(() => {
-    if (!isAdmin) {
-      setIsLoading(false);
+    if (!isAdmin || !user) {
+      if (!loading && !role) setIsLoading(false);
       return;
     }
 
-    const q = query(collection(db, "applications"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "applications"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const apps = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -120,15 +120,20 @@ export default function AdminDashboard() {
 
   const filteredApps = applications.filter(app => {
     const matchesSearch = app.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.idNumber.includes(searchQuery) ||
-      app.mobile.includes(searchQuery);
+      (app.firstName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.lastName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (app.idNumber || '').includes(searchQuery) ||
+      (app.mobile || '').includes(searchQuery);
       
     if (activeTab === 'reminders') {
       return matchesSearch && app.status === 'Approved' && app.repaymentDate;
     }
     return matchesSearch;
+  }).sort((a, b) => {
+    const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.date || 0).getTime();
+    const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.date || 0).getTime();
+    return timeB - timeA;
   });
 
   return (

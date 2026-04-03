@@ -42,6 +42,18 @@ export default function Contact() {
 
                 <div className="flex items-start gap-4">
                   <div className="bg-emerald-100 p-3 rounded-xl text-emerald-600 flex-shrink-0">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">Website</h4>
+                    <a href="https://www.SmoothOperations.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 transition-colors">www.SmoothOperations.com</a>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="bg-emerald-100 p-3 rounded-xl text-emerald-600 flex-shrink-0">
                     <MapPin className="w-6 h-6" />
                   </div>
                   <div>

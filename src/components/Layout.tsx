@@ -193,8 +193,8 @@ export default function Layout() {
               <ul className="space-y-2 text-sm">
                 <li><Link to="/faq" className="hover:text-emerald-400 transition-colors">FAQ</Link></li>
                 <li><Link to="/contact" className="hover:text-emerald-400 transition-colors">Contact Us</Link></li>
-                <li><a href="#" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
+                <li><a href="https://www.SmoothOperations.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="https://www.SmoothOperations.com/terms" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
               </ul>
             </div>
 
@@ -203,6 +203,7 @@ export default function Layout() {
               <ul className="space-y-2 text-sm text-slate-400">
                 <li>📞 082 642 3178</li>
                 <li>✉️ lesegokwamongwe@gmail.com</li>
+                <li>🌐 <a href="https://www.SmoothOperations.com" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">www.SmoothOperations.com</a></li>
                 <li>🏢 123 Financial District, Sandton, Johannesburg, 2196</li>
               </ul>
             </div>

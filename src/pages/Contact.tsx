@@ -48,7 +48,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-slate-900 mb-1">Website</h4>
-                    <a href="https://www.SmoothOperations.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 transition-colors">www.SmoothOperations.com</a>
+                    <a href="https://smoothoperation.net" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 transition-colors">smoothoperation.net</a>
                   </div>
                 </div>
 

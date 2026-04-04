@@ -318,11 +318,11 @@ export default function ApplyNow() {
                   <label htmlFor="loanAmount" className="text-sm font-medium text-slate-700">Desired Loan Amount</label>
                   <select required name="loanAmount" id="loanAmount" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white">
                     <option value="">Select amount...</option>
-                    <option value="200">R200</option>
-                    <option value="500">R500</option>
-                    <option value="1000">R1,000</option>
-                    <option value="2000">R2,000</option>
-                    <option value="5000">R5,000</option>
+                    {Array.from({ length: (5000 - 200) / 50 + 1 }, (_, i) => 200 + i * 50).map((amount) => (
+                      <option key={amount} value={amount}>
+                        R{amount.toLocaleString()}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

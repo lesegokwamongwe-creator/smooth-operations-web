@@ -4,7 +4,7 @@ import { Check, ArrowRight, Calculator, Info } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function LoanOptions() {
-  const [amount, setAmount] = useState(2000);
+  const [amount, setAmount] = useState(200);
   const [results, setResults] = useState({
     totalInterest: 0,
     totalRepayment: 0,
@@ -13,7 +13,7 @@ export default function LoanOptions() {
 
   useEffect(() => {
     // Fixed calculation: 31 days term
-    // Total cost is 40% interest (R40 for every R100)
+    // Total cost is R40 interest for every R100 borrowed (R20 per R50)
     const interestRate = 0.40;
     
     const totalInterest = amount * interestRate;
@@ -103,7 +103,7 @@ export default function LoanOptions() {
                     type="range" 
                     min="200" 
                     max="5000" 
-                    step="100"
+                    step="50"
                     value={amount}
                     onChange={(e) => setAmount(parseInt(e.target.value))}
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
@@ -128,7 +128,7 @@ export default function LoanOptions() {
               <div className="mt-10 flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <Info className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Repayment is due exactly 31 days from the date of application. Calculations are based on a 40% interest rate.
+                  Repayment is due exactly 31 days from the date of application. Calculations are based on R40 interest for every R100 borrowed (R20 per R50).
                 </p>
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function LoanOptions() {
 
                 <div className="grid grid-cols-1 gap-6 pt-6 border-t border-slate-800">
                   <div>
-                    <p className="text-slate-400 text-xs mb-1 uppercase tracking-wider font-semibold">Total Interest (40%)</p>
+                    <p className="text-slate-400 text-xs mb-1 uppercase tracking-wider font-semibold">Total Interest (R40 per R100)</p>
                     <p className="text-lg font-bold">R {results.totalInterest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <div>

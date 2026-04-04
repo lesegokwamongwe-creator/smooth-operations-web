@@ -3,7 +3,7 @@ import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField } from "firebase/firestore";
 import { handleFirestoreError, OperationType } from "../lib/firestoreUtils";
-import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send } from "lucide-react";
+import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function AdminDashboard() {
@@ -82,15 +82,44 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSendReminder = async (appId: string, type: 'email' | 'sms') => {
+  const handleSendReminder = async (appId: string, type: 'email' | 'sms' | 'whatsapp') => {
     try {
       await updateDoc(doc(db, "applications", appId), {
         lastReminderSent: new Date().toISOString()
       });
-      // The actual sending is handled by the mailto:/sms: links in the UI.
+      // The actual sending is handled by the mailto:/sms:/wa.me links in the UI.
       // This just logs that the admin clicked it.
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `applications/${appId}`);
+    }
+  };
+
+  const formatWhatsAppNumber = (mobile: string) => {
+    if (!mobile) return '';
+    let cleaned = mobile.replace(/\D/g, '');
+    // Assuming South African numbers (starting with 0)
+    if (cleaned.startsWith('0')) {
+      cleaned = '27' + cleaned.substring(1);
+    }
+    return cleaned;
+  };
+
+  const handleViewPayslip = (base64Data: string) => {
+    try {
+      const arr = base64Data.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while(n--){
+          u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], {type: mime});
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error("Error opening payslip:", error);
+      alert("Could not open payslip. Try downloading it instead.");
     }
   };
 
@@ -278,6 +307,16 @@ export default function AdminDashboard() {
                             >
                               <MessageSquare className="w-5 h-5" />
                             </a>
+                            <a 
+                              href={`https://wa.me/${formatWhatsAppNumber(app.mobile)}?text=${encodeURIComponent(`Smooth Operations: Dear ${app.name || app.firstName}, your loan repayment of R${app.repaymentAmount} is due on ${app.repaymentDate}.`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => handleSendReminder(app.id, 'whatsapp')}
+                              className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                              title="Send WhatsApp Reminder"
+                            >
+                              <MessageCircle className="w-5 h-5" />
+                            </a>
                           </div>
                         </td>
                       </>
@@ -320,6 +359,27 @@ export default function AdminDashboard() {
             </div>
 
             <div className="p-6 space-y-8">
+              {/* Identity Verification */}
+              {selectedApp.idNumber && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <ShieldCheck className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-sm font-bold text-blue-900 uppercase tracking-wider">Identity Verification</h3>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-blue-600/80 mb-1">South African ID Number</p>
+                      <p className="text-lg font-mono font-bold text-blue-900 tracking-widest">{selectedApp.idNumber}</p>
+                    </div>
+                    <div className="bg-white px-3 py-1 rounded-lg border border-blue-200">
+                      <span className="text-xs font-bold text-blue-600">
+                        {selectedApp.idNumber?.length === 13 ? '13 Digits Valid' : 'Invalid Length'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Applicant Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -329,12 +389,6 @@ export default function AdminDashboard() {
                       <dt className="text-sm text-slate-500">Full Name</dt>
                       <dd className="font-medium text-slate-900">{selectedApp.name || `${selectedApp.firstName} ${selectedApp.lastName}`}</dd>
                     </div>
-                    {selectedApp.idNumber && (
-                      <div>
-                        <dt className="text-sm text-slate-500">ID Number</dt>
-                        <dd className="font-medium text-slate-900">{selectedApp.idNumber}</dd>
-                      </div>
-                    )}
                     <div>
                       <dt className="text-sm text-slate-500">Email</dt>
                       <dd className="font-medium text-slate-900">{selectedApp.email}</dd>
@@ -387,13 +441,23 @@ export default function AdminDashboard() {
                         <p className="text-xs text-slate-500">Uploaded with application</p>
                       </div>
                     </div>
-                    <a 
-                      href={selectedApp.payslipData} 
-                      download={`Payslip_${selectedApp.firstName}_${selectedApp.lastName}`}
-                      className="text-sm font-medium text-emerald-600 hover:text-emerald-700 bg-white border border-emerald-200 px-4 py-2 rounded-lg transition-colors"
-                    >
-                      Download
-                    </a>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewPayslip(selectedApp.payslipData)}
+                        className="text-sm font-medium text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </button>
+                      <a 
+                        href={selectedApp.payslipData} 
+                        download={`Payslip_${selectedApp.firstName}_${selectedApp.lastName}`}
+                        className="text-sm font-medium text-emerald-600 hover:text-emerald-700 bg-white border border-emerald-200 hover:bg-emerald-50 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-slate-500 italic">No payslip uploaded.</p>

@@ -3,7 +3,7 @@ import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField } from "firebase/firestore";
 import { handleFirestoreError, OperationType } from "../lib/firestoreUtils";
-import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle } from "lucide-react";
+import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle, Landmark, CreditCard } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function AdminDashboard() {
@@ -16,7 +16,7 @@ export default function AdminDashboard() {
   const [declineReason, setDeclineReason] = useState("");
   const [repaymentDate, setRepaymentDate] = useState("");
   const [repaymentAmount, setRepaymentAmount] = useState("");
-  const [activeTab, setActiveTab] = useState<'applications' | 'reminders'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'reminders' | 'payouts'>('applications');
 
   const isAdmin = role === 'admin';
 
@@ -94,6 +94,21 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleProcessDebitOrder = async (appId: string) => {
+    if (window.confirm("Are you sure you want to process this debit order and mark the loan as Paid?")) {
+      setIsUpdating(true);
+      try {
+        await updateDoc(doc(db, "applications", appId), {
+          status: 'Paid'
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `applications/${appId}`);
+      } finally {
+        setIsUpdating(false);
+      }
+    }
+  };
+
   const formatWhatsAppNumber = (mobile: string) => {
     if (!mobile) return '';
     let cleaned = mobile.replace(/\D/g, '');
@@ -158,6 +173,9 @@ export default function AdminDashboard() {
     if (activeTab === 'reminders') {
       return matchesSearch && app.status === 'Approved' && app.repaymentDate;
     }
+    if (activeTab === 'payouts') {
+      return matchesSearch && app.status === 'Approved';
+    }
     return matchesSearch;
   }).sort((a, b) => {
     const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.date || 0).getTime();
@@ -191,10 +209,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-2 mb-6 bg-white p-1.5 rounded-xl border border-slate-200 inline-flex">
+        <div className="flex space-x-2 mb-6 bg-white p-1.5 rounded-xl border border-slate-200 inline-flex overflow-x-auto max-w-full">
           <button
             onClick={() => setActiveTab('applications')}
-            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === 'applications' 
                 ? 'bg-slate-900 text-white shadow-sm' 
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -203,8 +221,19 @@ export default function AdminDashboard() {
             All Applications
           </button>
           <button
+            onClick={() => setActiveTab('payouts')}
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'payouts' 
+                ? 'bg-emerald-600 text-white shadow-sm' 
+                : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
+            }`}
+          >
+            <Landmark className="w-4 h-4" />
+            Payouts (Bank Details)
+          </button>
+          <button
             onClick={() => setActiveTab('reminders')}
-            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === 'reminders' 
                 ? 'bg-emerald-600 text-white shadow-sm' 
                 : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
@@ -229,11 +258,17 @@ export default function AdminDashboard() {
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600">Status</th>
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600 text-right">Action</th>
                     </>
+                  ) : activeTab === 'payouts' ? (
+                    <>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Bank Details</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Payout Amount</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600 text-right">Action</th>
+                    </>
                   ) : (
                     <>
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600">Repayment Due</th>
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600">Amount Due</th>
-                      <th className="px-6 py-4 text-sm font-semibold text-slate-600 text-right">Send Reminder</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600 text-right">Actions</th>
                     </>
                   )}
                 </tr>
@@ -275,6 +310,24 @@ export default function AdminDashboard() {
                           </button>
                         </td>
                       </>
+                    ) : activeTab === 'payouts' ? (
+                      <>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-slate-900">{app.bankName || 'N/A'}</p>
+                          <p className="text-xs text-slate-500">{app.accountNumber ? `${app.accountNumber} (${app.accountType})` : 'No account provided'}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-emerald-600">R {(app.loanAmount || app.amount)?.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => {
+                              setSelectedApp(app);
+                            }}
+                            className="text-sm font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors"
+                          >
+                            View Full App
+                          </button>
+                        </td>
+                      </>
                     ) : (
                       <>
                         <td className="px-6 py-4 text-sm font-medium text-slate-900">
@@ -291,6 +344,15 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 text-sm font-bold text-emerald-600">R {app.repaymentAmount?.toLocaleString()}</td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleProcessDebitOrder(app.id)}
+                              disabled={isUpdating}
+                              className="inline-flex items-center justify-center px-4 h-10 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors text-sm font-medium gap-2 mr-2 disabled:bg-slate-400"
+                              title="Process Debit Order & Mark Paid"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              <span className="hidden md:inline">Process Debit</span>
+                            </button>
                             <a 
                               href={`mailto:${app.email}?subject=Loan Repayment Reminder&body=Dear ${app.name || app.firstName},%0D%0A%0D%0AThis is a friendly reminder from Smooth Operations that your loan repayment of R${app.repaymentAmount} is due on ${app.repaymentDate}.%0D%0A%0D%0AThank you!`}
                               onClick={() => handleSendReminder(app.id, 'email')}
@@ -325,7 +387,7 @@ export default function AdminDashboard() {
                 ))}
                 {filteredApps.length === 0 && (
                   <tr>
-                    <td colSpan={activeTab === 'applications' ? 6 : 5} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={activeTab === 'applications' ? 6 : activeTab === 'payouts' ? 5 : 5} className="px-6 py-12 text-center text-slate-500">
                       No applications found matching your search.
                     </td>
                   </tr>
@@ -423,6 +485,18 @@ export default function AdminDashboard() {
                       <div>
                         <dt className="text-sm text-slate-500">Account</dt>
                         <dd className="font-medium text-slate-900">{selectedApp.accountNumber} ({selectedApp.accountType})</dd>
+                      </div>
+                    )}
+                    {(selectedApp.status === 'Approved' || selectedApp.status === 'Paid') && selectedApp.repaymentDate && (
+                      <div className="pt-3 border-t border-slate-200 mt-3">
+                        <dt className="text-sm text-slate-500">Repayment Due Date</dt>
+                        <dd className="font-medium text-slate-900">{selectedApp.repaymentDate}</dd>
+                      </div>
+                    )}
+                    {(selectedApp.status === 'Approved' || selectedApp.status === 'Paid') && selectedApp.repaymentAmount && (
+                      <div>
+                        <dt className="text-sm text-slate-500">Repayment Amount</dt>
+                        <dd className="font-medium text-emerald-600 text-lg">R {selectedApp.repaymentAmount?.toLocaleString()}</dd>
                       </div>
                     )}
                   </dl>

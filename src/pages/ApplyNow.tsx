@@ -370,12 +370,21 @@ export default function ApplyNow() {
               </div>
             </div>
 
-            {/* Consent */}
-            <div className="flex items-start gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <input required name="consent" type="checkbox" id="consent" className="mt-1 w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500" />
-              <label htmlFor="consent" className="text-sm text-slate-600 leading-relaxed">
-                I confirm that the information provided is true and correct. I consent to Smooth Operations performing a credit check and verifying my details in accordance with the POPI Act.
-              </label>
+            {/* Consent & Mandate */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <input required name="consent" type="checkbox" id="consent" className="mt-1 w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500" />
+                <label htmlFor="consent" className="text-sm text-slate-600 leading-relaxed">
+                  I confirm that the information provided is true and correct. I consent to Smooth Operations performing a credit check and verifying my details in accordance with the POPI Act.
+                </label>
+              </div>
+
+              <div className="flex items-start gap-3 bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                <input required name="mandate" type="checkbox" id="mandate" className="mt-1 w-5 h-5 text-emerald-600 rounded border-emerald-300 focus:ring-emerald-500" />
+                <label htmlFor="mandate" className="text-sm text-emerald-800 leading-relaxed">
+                  <strong>Debit Order Mandate:</strong> I hereby authorize Smooth Operations to issue and deliver payment instructions to my bank for collection against my account on the agreed repayment date (NAEDO/DebiCheck).
+                </label>
+              </div>
             </div>
 
             <button 
@@ -446,23 +455,23 @@ export default function ApplyNow() {
                 </div>
 
                 <div className={`flex items-center gap-4 p-6 rounded-2xl ${
-                  searchResult.status === 'Approved' ? 'bg-emerald-50 border border-emerald-100' :
+                  (searchResult.status === 'Approved' || searchResult.status === 'Paid') ? 'bg-emerald-50 border border-emerald-100' :
                   searchResult.status === 'Declined' ? 'bg-red-50 border border-red-100' :
                   'bg-amber-50 border border-amber-100'
                 }`}>
                   <div className={`p-3 rounded-xl ${
-                    searchResult.status === 'Approved' ? 'bg-emerald-500' :
+                    (searchResult.status === 'Approved' || searchResult.status === 'Paid') ? 'bg-emerald-500' :
                     searchResult.status === 'Declined' ? 'bg-red-500' :
                     'bg-amber-500'
                   }`}>
-                    {searchResult.status === 'Approved' ? <CheckCircle className="w-6 h-6 text-white" /> :
+                    {(searchResult.status === 'Approved' || searchResult.status === 'Paid') ? <CheckCircle className="w-6 h-6 text-white" /> :
                      searchResult.status === 'Declined' ? <XCircle className="w-6 h-6 text-white" /> :
                      <Clock className="w-6 h-6 text-white" />}
                   </div>
-                  <div>
+                  <div className="flex-grow">
                     <p className="text-sm text-slate-500 font-medium mb-0.5">Current Status</p>
                     <p className={`text-xl font-bold ${
-                      searchResult.status === 'Approved' ? 'text-emerald-700' :
+                      (searchResult.status === 'Approved' || searchResult.status === 'Paid') ? 'text-emerald-700' :
                       searchResult.status === 'Declined' ? 'text-red-700' :
                       'text-amber-700'
                     }`}>
@@ -473,11 +482,24 @@ export default function ApplyNow() {
                         Reason: {searchResult.declineReason}
                       </p>
                     )}
+                    {(searchResult.status === 'Approved' || searchResult.status === 'Paid') && searchResult.repaymentDate && (
+                      <div className="mt-3 pt-3 border-t border-emerald-200/50 flex justify-between items-center">
+                        <div>
+                          <p className="text-xs text-emerald-700/70 font-medium uppercase tracking-wider">Repayment Due</p>
+                          <p className="text-sm font-bold text-emerald-900">{searchResult.repaymentDate}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-emerald-700/70 font-medium uppercase tracking-wider">Amount</p>
+                          <p className="text-sm font-bold text-emerald-900">R {searchResult.repaymentAmount?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <p className="mt-6 text-sm text-slate-500 text-center italic">
                   {searchResult.status === 'Approved' ? "Congratulations! Your funds will be disbursed shortly." :
+                   searchResult.status === 'Paid' ? "Your loan has been successfully repaid. Thank you!" :
                    searchResult.status === 'Declined' ? "We're sorry, but we cannot offer you a loan at this time." :
                    "Our team is currently reviewing your application. Please check back later."}
                 </p>
@@ -517,7 +539,7 @@ export default function ApplyNow() {
                             <td className="px-6 py-4">
                               <div className="flex flex-col items-start gap-1">
                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                                  (app.status === 'Approved' || app.status === 'Paid') ? 'bg-emerald-100 text-emerald-800' :
                                   app.status === 'Declined' ? 'bg-red-100 text-red-800' :
                                   'bg-amber-100 text-amber-800'
                                 }`}>

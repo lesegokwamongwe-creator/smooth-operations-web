@@ -69,7 +69,7 @@ service cloud.firestore {
              isValidEmail(data.email) && data.email.size() < 150 &&
              (!('netIncome' in data) || (data.netIncome is number && data.netIncome > 0)) &&
              (('loanAmount' in data && data.loanAmount is number && data.loanAmount > 0) || ('amount' in data && data.amount is number && data.amount > 0)) &&
-             data.status in ['Pending Review', 'Approved', 'Declined'] &&
+             data.status in ['Pending Review', 'Approved', 'Declined', 'Paid'] &&
              data.date is string && data.date.size() > 0 && data.date.size() < 20 &&
              data.createdAt is timestamp &&
              (!('bankName' in data) || (data.bankName is string && data.bankName.size() > 0 && data.bankName.size() < 100)) &&

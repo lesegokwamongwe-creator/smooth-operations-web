@@ -20,10 +20,13 @@ export default function ApplyNow() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<{
-    status: 'Pending Review' | 'Approved' | 'Declined';
+    status: 'Pending Review' | 'Approved' | 'Declined' | 'Paid';
     id: string;
     date: string;
     declineReason?: string;
+    repaymentDate?: string;
+    repaymentAmount?: number;
+    loanAmount?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -68,7 +71,10 @@ export default function ApplyNow() {
           status: foundApp.status,
           id: foundApp.id,
           date: foundApp.date,
-          declineReason: foundApp.declineReason
+          declineReason: foundApp.declineReason,
+          repaymentDate: foundApp.repaymentDate,
+          repaymentAmount: foundApp.repaymentAmount,
+          loanAmount: foundApp.loanAmount || foundApp.amount
         });
       } else {
         setSearchError("No application found with that ID or Mobile Number.");
@@ -93,9 +99,22 @@ export default function ApplyNow() {
     }
     
     const file = formData.get("payslip") as File;
-    if (file && file.size > 500 * 1024) {
-      setFormError("Payslip file is too large. Please upload a file smaller than 500KB.");
-      return;
+    
+    // Check file type and size
+    const isImage = file && file.type.startsWith('image/');
+    const isPDF = file && file.type === 'application/pdf';
+    
+    if (file) {
+      if (isPDF && file.size > 700 * 1024) {
+        setFormError("PDF payslip is too large. Please upload a PDF smaller than 700KB, or upload an image instead.");
+        return;
+      } else if (isImage && file.size > 10 * 1024 * 1024) {
+        setFormError("Image is too large. Please upload an image smaller than 10MB.");
+        return;
+      } else if (!isImage && !isPDF) {
+        setFormError("Invalid file format. Please upload a PDF or an Image (JPG/PNG).");
+        return;
+      }
     }
     
     setIsSubmitting(true);
@@ -103,12 +122,55 @@ export default function ApplyNow() {
     try {
       let payslipData = "";
       if (file && file.size > 0) {
-        payslipData = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+        if (isImage) {
+          // Compress image
+          payslipData = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+                const MAX_DIMENSION = 1200;
+                
+                if (width > height && width > MAX_DIMENSION) {
+                  height *= MAX_DIMENSION / width;
+                  width = MAX_DIMENSION;
+                } else if (height > MAX_DIMENSION) {
+                  width *= MAX_DIMENSION / height;
+                  height = MAX_DIMENSION;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                
+                let quality = 0.8;
+                let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                // Keep compressing if it's still larger than ~500KB (approx 666KB base64)
+                while (dataUrl.length > 500 * 1024 * 1.33 && quality > 0.1) {
+                  quality -= 0.1;
+                  dataUrl = canvas.toDataURL('image/jpeg', quality);
+                }
+                resolve(dataUrl);
+              };
+              img.onerror = reject;
+              img.src = e.target?.result as string;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        } else {
+          // It's a PDF, just convert to base64
+          payslipData = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
       }
 
       const newApp = {
@@ -366,7 +428,7 @@ export default function ApplyNow() {
               <div className="space-y-2">
                 <label htmlFor="payslip" className="text-sm font-medium text-slate-700">Latest Payslip</label>
                 <input required name="payslip" type="file" id="payslip" accept=".pdf,image/*" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100" />
-                <p className="text-xs text-slate-500 mt-1">Max file size: 500KB. Accepted formats: PDF, JPG, PNG.</p>
+                <p className="text-xs text-slate-500 mt-1">Max file size: 10MB for Images (JPG/PNG), 700KB for PDFs.</p>
               </div>
             </div>
 
@@ -443,10 +505,14 @@ export default function ApplyNow() {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg"
               >
-                <div className="flex items-center justify-between mb-6">
+                <div className="grid grid-cols-3 gap-4 mb-6">
                   <div>
                     <p className="text-sm text-slate-500 mb-1">Application ID</p>
                     <p className="font-mono font-bold text-slate-900">{searchResult.id}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-500 mb-1">Requested Amount</p>
+                    <p className="font-bold text-slate-900">R {searchResult.loanAmount?.toLocaleString()}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-500 mb-1">Applied On</p>

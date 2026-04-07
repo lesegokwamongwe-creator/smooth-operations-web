@@ -195,8 +195,8 @@ export default function Layout() {
               <ul className="space-y-2 text-sm">
                 <li><Link to="/faq" className="hover:text-emerald-400 transition-colors">FAQ</Link></li>
                 <li><Link to="/contact" className="hover:text-emerald-400 transition-colors">Contact Us</Link></li>
-                <li><a href="https://smoothoperation.net/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="https://smoothoperation.net/terms" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
+                <li><a href="https://smoothoperations.netlify.app/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="https://smoothoperations.netlify.app/terms" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Terms of Service</a></li>
               </ul>
             </div>
 
@@ -205,7 +205,7 @@ export default function Layout() {
               <ul className="space-y-2 text-sm text-slate-400">
                 <li>📞 082 642 3178</li>
                 <li>✉️ lesegokwamongwe@gmail.com</li>
-                <li>🌐 <a href="https://smoothoperation.net" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">smoothoperation.net</a></li>
+                <li>🌐 <a href="https://smoothoperations.netlify.app" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">smoothoperations.netlify.app</a></li>
                 <li>🏢 123 Financial District, Sandton, Johannesburg, 2196</li>
               </ul>
             </div>

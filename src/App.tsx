@@ -12,6 +12,7 @@ import ApplyNow from "./pages/ApplyNow";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import AdminDashboard from "./pages/AdminDashboard";
+import FinancialCoach from "./pages/FinancialCoach";
 import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./lib/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -30,6 +31,7 @@ export default function App() {
               <Route path="apply" element={<ApplyNow />} />
               <Route path="faq" element={<FAQ />} />
               <Route path="contact" element={<Contact />} />
+              <Route path="coach" element={<FinancialCoach />} />
               <Route path="admin" element={<AdminDashboard />} />
             </Route>
           </Routes>

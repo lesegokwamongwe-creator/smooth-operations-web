@@ -15,6 +15,7 @@ export default function Layout() {
     { name: "Home", path: "/" },
     { name: "How It Works", path: "/how-it-works" },
     { name: "Loan Options", path: "/loan-options" },
+    { name: "Financial Coach", path: "/coach" },
     { name: "FAQ", path: "/faq" },
     { name: "Contact", path: "/contact" },
   ];
@@ -184,6 +185,7 @@ export default function Layout() {
                 <li><Link to="/" className="hover:text-emerald-400 transition-colors">Home</Link></li>
                 <li><Link to="/how-it-works" className="hover:text-emerald-400 transition-colors">How It Works</Link></li>
                 <li><Link to="/loan-options" className="hover:text-emerald-400 transition-colors">Loan Options</Link></li>
+                <li><Link to="/coach" className="hover:text-emerald-400 transition-colors">Financial Coach</Link></li>
                 <li><Link to="/apply" className="hover:text-emerald-400 transition-colors">Apply Now</Link></li>
               </ul>
             </div>

@@ -3,7 +3,7 @@ import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField } from "firebase/firestore";
 import { handleFirestoreError, OperationType } from "../lib/firestoreUtils";
-import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle, Landmark, CreditCard } from "lucide-react";
+import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle, Landmark, CreditCard, Users } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function AdminDashboard() {
@@ -16,9 +16,52 @@ export default function AdminDashboard() {
   const [declineReason, setDeclineReason] = useState("");
   const [repaymentDate, setRepaymentDate] = useState("");
   const [repaymentAmount, setRepaymentAmount] = useState("");
-  const [activeTab, setActiveTab] = useState<'applications' | 'reminders' | 'payouts'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'reminders' | 'payouts' | 'clients'>('applications');
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText: string;
+    confirmColor: string;
+  } | null>(null);
 
   const isAdmin = role === 'admin';
+
+  const clients = React.useMemo(() => {
+    const clientMap = new Map<string, any>();
+    
+    applications.forEach(app => {
+      const key = app.idNumber || app.email || app.mobile;
+      if (!key) return;
+      
+      if (!clientMap.has(key)) {
+        clientMap.set(key, {
+          id: key,
+          name: app.name || `${app.firstName || ''} ${app.lastName || ''}`.trim() || 'Unknown',
+          idNumber: app.idNumber,
+          mobile: app.mobile,
+          email: app.email,
+          totalApplications: 0,
+          totalApprovedAmount: 0,
+          latestApplicationDate: app.date || new Date().toISOString(),
+        });
+      }
+      
+      const client = clientMap.get(key);
+      client.totalApplications += 1;
+      if (app.status === 'Approved' || app.status === 'Paid') {
+        client.totalApprovedAmount += (app.loanAmount || app.amount || 0);
+      }
+      if (new Date(app.date || 0) > new Date(client.latestApplicationDate)) {
+        client.latestApplicationDate = app.date;
+      }
+    });
+    
+    return Array.from(clientMap.values()).sort((a, b) => 
+      new Date(b.latestApplicationDate).getTime() - new Date(a.latestApplicationDate).getTime()
+    );
+  }, [applications]);
 
   useEffect(() => {
     if (!isAdmin || !user) {
@@ -94,19 +137,45 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleProcessDebitOrder = async (appId: string) => {
-    if (window.confirm("Are you sure you want to process this debit order and mark the loan as Paid?")) {
-      setIsUpdating(true);
-      try {
-        await updateDoc(doc(db, "applications", appId), {
-          status: 'Paid'
-        });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `applications/${appId}`);
-      } finally {
-        setIsUpdating(false);
+  const handleProcessDebitOrder = (appId: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Process Debit Order",
+      message: "Are you sure you want to process this debit order? This action will mark the loan as 'Paid'.",
+      confirmText: "Process Debit",
+      confirmColor: "bg-slate-900 hover:bg-slate-800",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setIsUpdating(true);
+        try {
+          await updateDoc(doc(db, "applications", appId), {
+            status: 'Paid'
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `applications/${appId}`);
+        } finally {
+          setIsUpdating(false);
+        }
       }
+    });
+  };
+
+  const confirmApproveApplication = () => {
+    if (!repaymentDate || !repaymentAmount) {
+      alert("Please provide a repayment date and amount for approved loans.");
+      return;
     }
+    setConfirmDialog({
+      isOpen: true,
+      title: "Approve Application",
+      message: `Are you sure you want to approve this application? The repayment date will be set to ${repaymentDate} for an amount of R ${repaymentAmount}.`,
+      confirmText: "Approve Application",
+      confirmColor: "bg-emerald-600 hover:bg-emerald-700",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        handleUpdateStatus(selectedApp.id, 'Approved');
+      }
+    });
   };
 
   const formatWhatsAppNumber = (mobile: string) => {
@@ -183,6 +252,13 @@ export default function AdminDashboard() {
     return timeB - timeA;
   });
 
+  const filteredClients = clients.filter(client => 
+    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.idNumber || '').includes(searchQuery) ||
+    (client.mobile || '').includes(searchQuery) ||
+    (client.email || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="py-12 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -242,6 +318,17 @@ export default function AdminDashboard() {
             <Calendar className="w-4 h-4" />
             Active Loans & Reminders
           </button>
+          <button
+            onClick={() => setActiveTab('clients')}
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'clients' 
+                ? 'bg-emerald-600 text-white shadow-sm' 
+                : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Client Records
+          </button>
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
@@ -264,6 +351,14 @@ export default function AdminDashboard() {
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600">Payout Amount</th>
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600 text-right">Action</th>
                     </>
+                  ) : activeTab === 'clients' ? (
+                    <>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Client Details</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Contact Info</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Total Apps</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Total Approved</th>
+                      <th className="px-6 py-4 text-sm font-semibold text-slate-600 text-right">Action</th>
+                    </>
                   ) : (
                     <>
                       <th className="px-6 py-4 text-sm font-semibold text-slate-600">Repayment Due</th>
@@ -274,8 +369,35 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredApps.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
+                {activeTab === 'clients' ? (
+                  filteredClients.map(client => (
+                    <tr key={client.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-slate-900">{client.name}</p>
+                        <p className="text-xs text-slate-500 font-mono">{client.idNumber || 'No ID'}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-slate-900">{client.mobile}</p>
+                        <p className="text-xs text-slate-500">{client.email}</p>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.totalApplications}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-emerald-600">R {client.totalApprovedAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={() => {
+                            setSearchQuery(client.idNumber || client.mobile || client.email);
+                            setActiveTab('applications');
+                          }}
+                          className="text-sm font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2 rounded-lg transition-colors"
+                        >
+                          View History
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  filteredApps.map((app) => (
+                    <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs font-medium text-slate-500">{app.id}</td>
                     <td className="px-6 py-4">
                       <p className="font-medium text-slate-900">{app.name || `${app.firstName} ${app.lastName}`}</p>
@@ -384,8 +506,15 @@ export default function AdminDashboard() {
                       </>
                     )}
                   </tr>
-                ))}
-                {filteredApps.length === 0 && (
+                )))}
+                {activeTab === 'clients' && filteredClients.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                      No clients found matching your search.
+                    </td>
+                  </tr>
+                )}
+                {activeTab !== 'clients' && filteredApps.length === 0 && (
                   <tr>
                     <td colSpan={activeTab === 'applications' ? 6 : activeTab === 'payouts' ? 5 : 5} className="px-6 py-12 text-center text-slate-500">
                       No applications found matching your search.
@@ -567,7 +696,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleUpdateStatus(selectedApp.id, 'Approved')}
+                      onClick={confirmApproveApplication}
                       disabled={isUpdating || selectedApp.status === 'Approved' || !repaymentDate || !repaymentAmount}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
                     >
@@ -609,6 +738,34 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+          >
+            <h3 className="text-xl font-bold text-slate-900 mb-2">{confirmDialog.title}</h3>
+            <p className="text-slate-600 mb-6">{confirmDialog.message}</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className={`px-4 py-2 rounded-lg font-medium text-white transition-colors ${confirmDialog.confirmColor}`}
+              >
+                {confirmDialog.confirmText}
+              </button>
             </div>
           </motion.div>
         </div>

@@ -58,6 +58,13 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isValidChatMessage(data) {
+      return hasOnlyAllowedFields(['role', 'text', 'createdAt']) &&
+             data.role in ['user', 'model'] &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 10000 &&
+             data.createdAt is timestamp;
+    }
+
     function isValidApplication(data) {
       return hasOnlyAllowedFields(['userId', 'name', 'firstName', 'lastName', 'idNumber', 'mobile', 'email', 'netIncome', 'loanAmount', 'amount', 'status', 'date', 'createdAt', 'bankName', 'accountNumber', 'accountType', 'payslipData', 'declineReason', 'repaymentDate', 'repaymentAmount', 'lastReminderSent']) &&
              data.userId is string &&
@@ -88,6 +95,13 @@ service cloud.firestore {
                     (request.resource.data.role == 'user' || 
                      (request.resource.data.role == 'admin' && request.auth.token.email == "lesegokwamongwe@gmail.com" && request.auth.token.email_verified == true));
       allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data)) || isAdmin();
+      allow delete: if false;
+    }
+
+    match /users/{userId}/chatMessages/{messageId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidChatMessage(request.resource.data);
+      allow update: if false;
       allow delete: if false;
     }
 

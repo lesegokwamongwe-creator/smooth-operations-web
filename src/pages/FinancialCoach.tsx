@@ -3,6 +3,9 @@ import { Send, Bot, User, Loader2, Info } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 import Markdown from 'react-markdown';
 import { cn } from '../lib/utils';
+import { useAuth } from '../lib/AuthContext';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
 interface Message {
   id: string;
@@ -10,22 +13,73 @@ interface Message {
   text: string;
 }
 
+const INITIAL_MESSAGE: Message = {
+  id: '1',
+  role: 'model',
+  text: "Hello! I'm your Smooth Operations Financial Coach. I'm here to help you understand budgeting, managing debt, improving your credit score, and making smart financial decisions. How can I help you today?",
+};
+
 export default function FinancialCoach() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'model',
-      text: "Hello! I'm your Smooth Operations Financial Coach. I'm here to help you understand budgeting, managing debt, improving your credit score, and making smart financial decisions. How can I help you today?",
-    },
-  ]);
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load chat history if user is logged in
+  useEffect(() => {
+    if (!user) {
+      setMessages([INITIAL_MESSAGE]);
+      return;
+    }
+
+    const q = query(
+      collection(db, `users/${user.uid}/chatMessages`),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (snapshot.empty) {
+        setMessages([INITIAL_MESSAGE]);
+        return;
+      }
+
+      const loadedMessages: Message[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        role: doc.data().role,
+        text: doc.data().text,
+      }));
+      
+      // Ensure the initial greeting is always at the top if it's not saved
+      if (loadedMessages.length === 0 || loadedMessages[0].text !== INITIAL_MESSAGE.text) {
+         setMessages([INITIAL_MESSAGE, ...loadedMessages]);
+      } else {
+         setMessages(loadedMessages);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/chatMessages`);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const saveMessageToFirestore = async (role: 'user' | 'model', text: string) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, `users/${user.uid}/chatMessages`), {
+        role,
+        text,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/chatMessages`);
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,12 +94,20 @@ export default function FinancialCoach() {
       text: userText,
     };
     
-    setMessages((prev) => [...prev, newUserMessage]);
+    // If not logged in, update local state immediately
+    if (!user) {
+      setMessages((prev) => [...prev, newUserMessage]);
+    } else {
+      // If logged in, save to Firestore (onSnapshot will update the UI)
+      // We also optimistically update to avoid lag
+      setMessages((prev) => [...prev, newUserMessage]);
+      await saveMessageToFirestore('user', userText);
+    }
+    
     setIsLoading(true);
 
     try {
       // Initialize Gemini API
-      // Note: In Vite, env variables are accessed via import.meta.env, but per instructions we use process.env.GEMINI_API_KEY for Gemini API
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       // We need to pass the conversation history
@@ -71,24 +133,33 @@ export default function FinancialCoach() {
 
       const text = response.text || "I'm sorry, I couldn't process that request right now. Please try again.";
       
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'model',
-          text: text,
-        },
-      ]);
+      if (!user) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            text: text,
+          },
+        ]);
+      } else {
+        await saveMessageToFirestore('model', text);
+      }
     } catch (error) {
       console.error("Error calling Gemini API:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'model',
-          text: "I'm sorry, I'm having trouble connecting right now. Please try again later.",
-        },
-      ]);
+      const errorText = "I'm sorry, I'm having trouble connecting right now. Please try again later.";
+      if (!user) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'model',
+            text: errorText,
+          },
+        ]);
+      } else {
+        await saveMessageToFirestore('model', errorText);
+      }
     } finally {
       setIsLoading(false);
     }

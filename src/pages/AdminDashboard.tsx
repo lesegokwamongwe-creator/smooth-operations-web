@@ -12,6 +12,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [repaymentDate, setRepaymentDate] = useState("");
@@ -44,18 +45,33 @@ export default function AdminDashboard() {
           email: app.email,
           totalApplications: 0,
           totalApprovedAmount: 0,
+          totalRepaidAmount: 0,
           latestApplicationDate: app.date || new Date().toISOString(),
+          applications: []
         });
       }
       
       const client = clientMap.get(key);
       client.totalApplications += 1;
+      client.applications.push(app);
+
       if (app.status === 'Approved' || app.status === 'Paid') {
         client.totalApprovedAmount += (app.loanAmount || app.amount || 0);
+      }
+      if (app.status === 'Paid') {
+        client.totalRepaidAmount += (app.repaymentAmount || app.loanAmount || app.amount || 0);
       }
       if (new Date(app.date || 0) > new Date(client.latestApplicationDate)) {
         client.latestApplicationDate = app.date;
       }
+    });
+
+    clientMap.forEach(client => {
+      client.applications.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.date || 0).getTime();
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.date || 0).getTime();
+        return timeB - timeA;
+      });
     });
     
     return Array.from(clientMap.values()).sort((a, b) => 
@@ -372,12 +388,12 @@ export default function AdminDashboard() {
                 {activeTab === 'clients' ? (
                   filteredClients.map(client => (
                     <tr key={client.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-slate-900">{client.name}</p>
+                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedClient(client)}>
+                        <p className="font-medium text-slate-900 hover:text-emerald-600 transition-colors">{client.name}</p>
                         <p className="text-xs text-slate-500 font-mono">{client.idNumber || 'No ID'}</p>
                       </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-slate-900">{client.mobile}</p>
+                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedClient(client)}>
+                        <p className="text-sm text-slate-900 hover:text-emerald-600 transition-colors">{client.mobile}</p>
                         <p className="text-xs text-slate-500">{client.email}</p>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-slate-900">{client.totalApplications}</td>
@@ -766,6 +782,109 @@ export default function AdminDashboard() {
               >
                 {confirmDialog.confirmText}
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Client Details Modal */}
+      {selectedClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="sticky top-0 bg-white border-b border-slate-100 p-6 flex items-center justify-between z-10">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Client Profile</h2>
+                <p className="text-sm font-medium text-slate-500 mt-1">{selectedClient.name}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedClient(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-8">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                  <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Total Applications</p>
+                  <p className="text-3xl font-extrabold text-slate-900">{selectedClient.totalApplications}</p>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5">
+                  <p className="text-sm font-bold text-emerald-600/80 uppercase tracking-wider mb-1">Total Approved</p>
+                  <p className="text-3xl font-extrabold text-emerald-600">R {selectedClient.totalApprovedAmount.toLocaleString()}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+                  <p className="text-sm font-bold text-blue-600/80 uppercase tracking-wider mb-1">Total Repaid</p>
+                  <p className="text-3xl font-extrabold text-blue-600">R {selectedClient.totalRepaidAmount.toLocaleString()}</p>
+                </div>
+              </div>
+
+              {/* Client Info */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Contact & Identity</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white border border-slate-200 rounded-2xl p-5">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">ID Number</p>
+                    <p className="font-mono font-medium text-slate-900">{selectedClient.idNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Mobile</p>
+                    <p className="font-medium text-slate-900">{selectedClient.mobile || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">Email</p>
+                    <p className="font-medium text-slate-900 truncate" title={selectedClient.email}>{selectedClient.email || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Applications History */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Application History</h3>
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="px-4 py-3 text-xs font-semibold text-slate-600">Date</th>
+                          <th className="px-4 py-3 text-xs font-semibold text-slate-600">Amount</th>
+                          <th className="px-4 py-3 text-xs font-semibold text-slate-600">Status</th>
+                          <th className="px-4 py-3 text-xs font-semibold text-slate-600">Repayment</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {selectedClient.applications.map((app: any) => (
+                          <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-4 py-3 text-sm text-slate-600">{app.date}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-slate-900">R {(app.loanAmount || app.amount)?.toLocaleString()}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                app.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                app.status === 'Paid' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                app.status === 'Declined' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {app.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-600">
+                              {app.repaymentAmount ? `R ${app.repaymentAmount.toLocaleString()}` : '-'}
+                              {app.repaymentDate && <span className="text-xs text-slate-400 block">{app.repaymentDate}</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </motion.div>
         </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Check, ArrowRight, Calculator, Info } from "lucide-react";
 import { motion } from "motion/react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 export default function LoanOptions() {
   const [amount, setAmount] = useState(200);
@@ -13,7 +14,8 @@ export default function LoanOptions() {
 
   useEffect(() => {
     // Fixed calculation: 31 days term
-    // Total cost is R40 interest for every R100 borrowed (R20 per R50)
+    // Interest is R40 for every R100 borrowed (R20 per R50)
+    // This is exactly 40% (0.40)
     const interestRate = 0.40;
     
     const totalInterest = amount * interestRate;
@@ -143,14 +145,41 @@ export default function LoanOptions() {
                   <p className="text-slate-500 text-sm mt-2 italic">Due in 31 days</p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 pt-6 border-t border-slate-800">
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1 uppercase tracking-wider font-semibold">Total Interest (R40 per R100)</p>
-                    <p className="text-lg font-bold">R {results.totalInterest.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                  </div>
+                {/* Visual Breakdown Chart */}
+                <div className="pt-2 pb-2 h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        { name: 'Principal', amount: amount, color: '#10b981' },
+                        { name: 'Interest', amount: results.totalInterest, color: '#f59e0b' }
+                      ]}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R${value}`} />
+                      <Tooltip 
+                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                        formatter={(value: number) => [`R ${value.toLocaleString()}`, 'Amount']}
+                      />
+                      <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
+                        {
+                          [
+                            { name: 'Principal', amount: amount, color: '#10b981' },
+                            { name: 'Interest', amount: results.totalInterest, color: '#f59e0b' }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))
+                        }
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 pt-4 border-t border-slate-800">
                   <div>
                     <p className="text-slate-400 text-xs mb-1 uppercase tracking-wider font-semibold">Late Penalty (If Overdue)</p>
-                    <p className="text-lg font-bold text-red-400">+ R {results.lateFeePenalty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (10%)</p>
+                    <p className="text-sm font-bold text-red-400">+ R {results.lateFeePenalty.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (10%)</p>
                   </div>
                 </div>
 

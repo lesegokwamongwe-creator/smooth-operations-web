@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ShieldCheck, ArrowRight, Loader2, Search, Clock, CheckCircle, XCircle, LogIn } from "lucide-react";
+import { ShieldCheck, ArrowRight, Loader2, Search, Clock, CheckCircle, XCircle, LogIn, Copy, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { useAuth } from "../lib/AuthContext";
 import { signInWithGoogle, db } from "../lib/firebase";
@@ -11,6 +11,7 @@ export default function ApplyNow() {
   const { user, loading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [formError, setFormError] = useState("");
   const [searchError, setSearchError] = useState("");
   const [pastApplications, setPastApplications] = useState<any[]>([]);
@@ -202,6 +203,12 @@ export default function ApplyNow() {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -216,51 +223,88 @@ export default function ApplyNow() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white max-w-md w-full rounded-3xl p-10 text-center border border-slate-200 shadow-xl mb-12"
+          className="bg-white max-w-lg w-full rounded-[2.5rem] p-10 text-center border border-slate-200 shadow-2xl mb-12 relative overflow-hidden"
         >
-          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShieldCheck className="w-10 h-10 text-emerald-600" />
+          <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
+          
+          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-8 relative">
+            <div className="absolute inset-0 bg-emerald-200 rounded-full animate-ping opacity-20"></div>
+            <CheckCircle className="w-12 h-12 text-emerald-600 relative z-10" />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">Application Received!</h2>
-          <p className="text-slate-600 mb-8">
-            Thank you for applying with Smooth Operations. Your application ID is <span className="font-mono font-bold text-slate-900">{currentApplication?.id}</span>. Our team is reviewing your details and will contact you shortly.
+          
+          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Success!</h2>
+          <p className="text-xl font-bold text-emerald-600 mb-6">Your application has been received.</p>
+          
+          <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
+            <p className="text-sm text-slate-500 uppercase tracking-widest font-bold mb-2">Application ID</p>
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-2xl font-mono font-black text-slate-900 tracking-tighter">
+                {currentApplication?.id}
+              </span>
+              <button 
+                onClick={() => copyToClipboard(currentApplication?.id || "")}
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
+                title="Copy ID"
+              >
+                {copied ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          <p className="text-slate-600 mb-10 leading-relaxed text-lg">
+            Thank you for choosing <span className="font-bold text-slate-900">Smooth Operations</span>. Our team is currently reviewing your details. You will receive an update via SMS or Email shortly.
           </p>
-          <button 
-            onClick={() => setIsSuccess(false)}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-4 rounded-xl font-bold transition-colors"
-          >
-            Apply for Another Loan
-          </button>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button 
+              onClick={() => setIsSuccess(false)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-900 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+            >
+              Apply Again
+            </button>
+            <Link 
+              to="/"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+            >
+              Back to Home <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
         </motion.div>
 
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="max-w-2xl w-full"
+          transition={{ delay: 0.3 }}
+          className="max-w-3xl w-full"
         >
-          <h3 className="text-2xl font-bold text-slate-900 mb-6 text-center">Your Application History</h3>
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Your Application History</h3>
+            <span className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+              {pastApplications.length} Total
+            </span>
+          </div>
+          
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden">
             {pastApplications.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
-                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">ID</th>
-                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Amount</th>
-                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Date</th>
-                      <th className="px-6 py-4 text-sm font-semibold text-slate-600">Status</th>
+                      <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">ID</th>
+                      <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                      <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Date</th>
+                      <th className="px-8 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {pastApplications.map((app, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono text-sm font-medium text-slate-900">{app.id}</td>
-                        <td className="px-6 py-4 text-sm text-slate-700">R {app.amount.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-sm text-slate-500">{app.date}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            app.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' :
+                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-8 py-5 font-mono text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">{app.id}</td>
+                        <td className="px-8 py-5 text-sm font-bold text-slate-700">R {(app.loanAmount || app.amount)?.toLocaleString()}</td>
+                        <td className="px-8 py-5 text-sm text-slate-500 font-medium">{app.date}</td>
+                        <td className="px-8 py-5">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                            (app.status === 'Approved' || app.status === 'Paid') ? 'bg-emerald-100 text-emerald-800' :
                             app.status === 'Declined' ? 'bg-red-100 text-red-800' :
                             'bg-amber-100 text-amber-800'
                           }`}>
@@ -273,15 +317,13 @@ export default function ApplyNow() {
                 </table>
               </div>
             ) : (
-              <div className="p-12 text-center">
-                <p className="text-slate-500">You have no past loan applications.</p>
+              <div className="p-16 text-center">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-slate-300" />
+                </div>
+                <p className="text-slate-500 font-medium">You have no past loan applications.</p>
               </div>
             )}
-          </div>
-          <div className="mt-8 text-center">
-            <Link to="/" className="text-emerald-600 font-semibold hover:text-emerald-700 flex items-center justify-center gap-2">
-              Return to Home <ArrowRight className="w-4 h-4" />
-            </Link>
           </div>
         </motion.div>
       </div>

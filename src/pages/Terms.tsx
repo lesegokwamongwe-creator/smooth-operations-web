@@ -36,22 +36,46 @@ export default function Terms() {
               To be eligible for a loan, you must be a South African citizen or permanent resident, be at least 18 years old, and have a verifiable source of income. All loan applications are subject to credit approval and affordability assessments in accordance with the National Credit Act (NCA).
             </p>
 
-            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">3. Interest Rates & Fees</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">3. Specific Loan Terms</h2>
+            <ul className="list-none space-y-3 text-slate-600 mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              <li className="flex items-start gap-3">
+                <span className="text-xl">🕒</span>
+                <span>Loan must be repaid in full by agreed date</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-xl">📊</span>
+                <span>Interest is fixed and doesn't compound</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-xl">💸</span>
+                <span>Early repayment allowed without penalty</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-xl">🚨</span>
+                <span>10% late fee if repayment is delayed</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="text-xl">🤝</span>
+                <span>All loans subject to Smooth Operations' approval</span>
+              </li>
+            </ul>
+
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">4. Interest Rates & Fees</h2>
             <p className="text-slate-600 mb-6">
               Interest rates and fees are determined based on your credit profile and the loan amount. All applicable fees, including initiation fees and monthly service fees, will be clearly disclosed in your loan agreement before you accept the loan.
             </p>
 
-            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">4. Repayment & Debit Orders</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">5. Repayment & Debit Orders</h2>
             <p className="text-slate-600 mb-6">
               By accepting a loan, you authorize Smooth Operations to collect repayments via debit order (NAEDO/DebiCheck) from your designated bank account on the agreed-upon dates. If a payment is missed, additional penalty fees and interest may apply.
             </p>
 
-            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">5. Credit Bureau Reporting</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">6. Credit Bureau Reporting</h2>
             <p className="text-slate-600 mb-6">
               We reserve the right to report your payment behavior to registered credit bureaus. Late payments, missed payments, or defaults may negatively impact your credit score.
             </p>
 
-            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">6. Contact Information</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">7. Contact Information</h2>
             <p className="text-slate-600 mb-6">
               If you have any questions about these Terms, please contact us via our website at <a href="https://smoothoperations.netlify.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 font-medium">smoothoperations.netlify.app</a>.
             </p>

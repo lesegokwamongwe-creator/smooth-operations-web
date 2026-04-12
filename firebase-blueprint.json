@@ -78,6 +78,10 @@
         "lastReminderSent": {
           "type": "string",
           "description": "Timestamp of the last reminder sent."
+        },
+        "applicationNumber": {
+          "type": "number",
+          "description": "Sequential application number."
         }
       },
       "required": [
@@ -95,7 +99,8 @@
         "bankName",
         "accountNumber",
         "accountType",
-        "payslipData"
+        "payslipData",
+        "applicationNumber"
       ]
     },
     "User": {
@@ -145,6 +150,18 @@
         }
       },
       "required": ["role", "text", "createdAt"]
+    },
+    "Counter": {
+      "title": "Counter",
+      "description": "A global counter for sequential IDs.",
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "number",
+          "description": "The current count."
+        }
+      },
+      "required": ["count"]
     }
   },
   "firestore": {
@@ -165,6 +182,12 @@
         "$ref": "#/entities/ChatMessage"
       },
       "description": "Stores chat history for the financial coach."
+    },
+    "/counters/{counterId}": {
+      "schema": {
+        "$ref": "#/entities/Counter"
+      },
+      "description": "Stores global counters."
     }
   }
 }

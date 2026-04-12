@@ -174,27 +174,43 @@ export default function ApplyNow() {
         }
       }
 
-      const newApp = {
-        userId: user.uid,
-        firstName: formData.get("firstName") as string,
-        lastName: formData.get("lastName") as string,
-        idNumber: formData.get("idNumber") as string,
-        mobile: formData.get("mobile") as string,
-        email: formData.get("email") as string,
-        netIncome: netIncome,
-        loanAmount: loanAmount,
-        bankName: formData.get("bankName") as string,
-        accountNumber: formData.get("accountNumber") as string,
-        accountType: formData.get("accountType") as string,
-        payslipData: payslipData,
-        status: "Pending Review",
-        date: new Date().toISOString().split('T')[0],
-        createdAt: serverTimestamp()
-      };
+      const counterRef = doc(db, 'counters', 'applications');
+      const newAppRef = doc(collection(db, 'applications'));
 
-      const docRef = await addDoc(collection(db, "applications"), newApp);
+      const newApp = await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        let nextNumber = 1;
+        if (counterDoc.exists()) {
+          nextNumber = (counterDoc.data().count || 0) + 1;
+          transaction.update(counterRef, { count: nextNumber });
+        } else {
+          transaction.set(counterRef, { count: nextNumber });
+        }
+
+        const appData = {
+          userId: user.uid,
+          firstName: formData.get("firstName") as string,
+          lastName: formData.get("lastName") as string,
+          idNumber: formData.get("idNumber") as string,
+          mobile: formData.get("mobile") as string,
+          email: formData.get("email") as string,
+          netIncome: netIncome,
+          loanAmount: loanAmount,
+          bankName: formData.get("bankName") as string,
+          accountNumber: formData.get("accountNumber") as string,
+          accountType: formData.get("accountType") as string,
+          payslipData: payslipData,
+          status: "Pending Review",
+          date: new Date().toISOString().split('T')[0],
+          createdAt: serverTimestamp(),
+          applicationNumber: nextNumber
+        };
+
+        transaction.set(newAppRef, appData);
+        return { ...appData, id: newAppRef.id };
+      });
       
-      setCurrentApplication({ ...newApp, id: docRef.id });
+      setCurrentApplication(newApp as any);
       setIsSubmitting(false);
       setIsSuccess(true);
     } catch (error) {
@@ -239,10 +255,10 @@ export default function ApplyNow() {
             <p className="text-sm text-slate-500 uppercase tracking-widest font-bold mb-2">Application ID</p>
             <div className="flex items-center justify-center gap-3">
               <span className="text-2xl font-mono font-black text-slate-900 tracking-tighter">
-                {currentApplication?.id}
+                {currentApplication?.applicationNumber ? `#${currentApplication.applicationNumber}` : currentApplication?.id}
               </span>
               <button 
-                onClick={() => copyToClipboard(currentApplication?.id || "")}
+                onClick={() => copyToClipboard(currentApplication?.applicationNumber ? `#${currentApplication.applicationNumber}` : currentApplication?.id || "")}
                 className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-600"
                 title="Copy ID"
               >
@@ -550,7 +566,7 @@ export default function ApplyNow() {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <div>
                     <p className="text-sm text-slate-500 mb-1">Application ID</p>
-                    <p className="font-mono font-bold text-slate-900">{searchResult.id}</p>
+                    <p className="font-mono font-bold text-slate-900">{searchResult.applicationNumber ? `#${searchResult.applicationNumber}` : searchResult.id}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-slate-500 mb-1">Requested Amount</p>
@@ -640,8 +656,12 @@ export default function ApplyNow() {
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {pastApplications.map((app, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-6 py-4 font-mono text-sm font-medium text-slate-900">{app.id}</td>
+                          <tr key={idx} className={`transition-colors ${
+                            (app.status === 'Approved' || app.status === 'Paid') ? 'bg-emerald-50/50 hover:bg-emerald-50' : 'hover:bg-slate-50/50'
+                          }`}>
+                            <td className="px-6 py-4 font-mono text-sm font-medium text-slate-900">
+                              {app.applicationNumber ? `#${app.applicationNumber}` : app.id}
+                            </td>
                             <td className="px-6 py-4 text-sm text-slate-700">R {app.loanAmount?.toLocaleString() || app.amount?.toLocaleString()}</td>
                             <td className="px-6 py-4 text-sm text-slate-500">{app.date}</td>
                             <td className="px-6 py-4">
@@ -654,8 +674,13 @@ export default function ApplyNow() {
                                   {app.status}
                                 </span>
                                 {app.status === 'Declined' && app.declineReason && (
-                                  <span className="text-xs text-red-600 font-medium">
-                                    {app.declineReason}
+                                  <span className="text-xs text-red-600 font-medium mt-1">
+                                    Reason: {app.declineReason}
+                                  </span>
+                                )}
+                                {(app.status === 'Approved' || app.status === 'Paid') && app.repaymentAmount && (
+                                  <span className="text-xs text-emerald-700 font-medium mt-1">
+                                    Owes: R {app.repaymentAmount?.toLocaleString()} by {app.repaymentDate}
                                   </span>
                                 )}
                               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
-import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField, limit } from "firebase/firestore";
 import { handleFirestoreError, OperationType } from "../lib/firestoreUtils";
 import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle, Landmark, CreditCard, Users } from "lucide-react";
 import { motion } from "motion/react";
@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [repaymentDate, setRepaymentDate] = useState("");
   const [repaymentAmount, setRepaymentAmount] = useState("");
   const [activeTab, setActiveTab] = useState<'applications' | 'reminders' | 'payouts' | 'clients'>('applications');
+  const [loadLimit, setLoadLimit] = useState(50);
+  const [hasMore, setHasMore] = useState(true);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -85,13 +87,14 @@ export default function AdminDashboard() {
       return;
     }
 
-    const q = query(collection(db, "applications"));
+    const q = query(collection(db, "applications"), orderBy("createdAt", "desc"), limit(loadLimit));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const apps = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setApplications(apps);
+      setHasMore(snapshot.docs.length === loadLimit);
       setIsLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "applications");
@@ -99,7 +102,7 @@ export default function AdminDashboard() {
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, [isAdmin, loadLimit]);
 
   const handleUpdateStatus = async (appId: string, newStatus: string) => {
     if (newStatus === 'Declined' && !declineReason.trim()) {
@@ -347,6 +350,21 @@ export default function AdminDashboard() {
           </button>
         </div>
 
+        {activeTab === 'clients' && (
+          <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+            <div className="mt-0.5 text-blue-600">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-blue-900">Client Records are generated from loaded applications</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                To improve dashboard performance, only the most recent {loadLimit} applications are loaded by default. 
+                Client totals shown here only reflect the currently loaded applications. Click "Load More" at the bottom to see older records.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -414,7 +432,9 @@ export default function AdminDashboard() {
                 ) : (
                   filteredApps.map((app) => (
                     <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-medium text-slate-500">{app.id}</td>
+                    <td className="px-6 py-4 font-mono text-xs font-medium text-slate-500">
+                      {app.applicationNumber ? `#${app.applicationNumber}` : app.id}
+                    </td>
                     <td className="px-6 py-4">
                       <p className="font-medium text-slate-900">{app.name || `${app.firstName} ${app.lastName}`}</p>
                       <p className="text-xs text-slate-500">{app.mobile}</p>
@@ -540,6 +560,17 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
+          
+          {hasMore && !searchQuery && (
+            <div className="p-4 border-t border-slate-100 flex justify-center bg-slate-50">
+              <button
+                onClick={() => setLoadLimit(prev => prev + 50)}
+                className="px-6 py-2 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm text-sm"
+              >
+                Load More
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
@@ -555,7 +586,7 @@ export default function AdminDashboard() {
             <div className="sticky top-0 bg-white border-b border-slate-100 p-6 flex items-center justify-between z-10">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Review Application</h2>
-                <p className="text-sm font-mono text-slate-500 mt-1">ID: {selectedApp.id}</p>
+                <p className="text-sm font-mono text-slate-500 mt-1">ID: {selectedApp.applicationNumber ? `#${selectedApp.applicationNumber}` : selectedApp.id}</p>
               </div>
               <button 
                 onClick={() => { setSelectedApp(null); setDeclineReason(""); setRepaymentDate(""); setRepaymentAmount(""); }}
@@ -852,6 +883,7 @@ export default function AdminDashboard() {
                     <table className="w-full text-left">
                       <thead className="bg-slate-50 border-b border-slate-100">
                         <tr>
+                          <th className="px-4 py-3 text-xs font-semibold text-slate-600">ID</th>
                           <th className="px-4 py-3 text-xs font-semibold text-slate-600">Date</th>
                           <th className="px-4 py-3 text-xs font-semibold text-slate-600">Amount</th>
                           <th className="px-4 py-3 text-xs font-semibold text-slate-600">Status</th>
@@ -861,6 +893,9 @@ export default function AdminDashboard() {
                       <tbody className="divide-y divide-slate-100">
                         {selectedClient.applications.map((app: any) => (
                           <tr key={app.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-4 py-3 font-mono text-xs font-medium text-slate-500">
+                              {app.applicationNumber ? `#${app.applicationNumber}` : app.id}
+                            </td>
                             <td className="px-4 py-3 text-sm text-slate-600">{app.date}</td>
                             <td className="px-4 py-3 text-sm font-medium text-slate-900">R {(app.loanAmount || app.amount)?.toLocaleString()}</td>
                             <td className="px-4 py-3">

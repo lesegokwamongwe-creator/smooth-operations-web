@@ -66,7 +66,7 @@ service cloud.firestore {
     }
 
     function isValidApplication(data) {
-      return hasOnlyAllowedFields(['userId', 'name', 'firstName', 'lastName', 'idNumber', 'mobile', 'email', 'netIncome', 'loanAmount', 'amount', 'status', 'date', 'createdAt', 'bankName', 'accountNumber', 'accountType', 'payslipData', 'declineReason', 'repaymentDate', 'repaymentAmount', 'lastReminderSent']) &&
+      return hasOnlyAllowedFields(['userId', 'name', 'firstName', 'lastName', 'idNumber', 'mobile', 'email', 'netIncome', 'loanAmount', 'amount', 'status', 'date', 'createdAt', 'bankName', 'accountNumber', 'accountType', 'payslipData', 'declineReason', 'repaymentDate', 'repaymentAmount', 'lastReminderSent', 'applicationNumber']) &&
              data.userId is string &&
              (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() < 100)) &&
              (!('firstName' in data) || (data.firstName is string && data.firstName.size() > 0 && data.firstName.size() < 100)) &&
@@ -86,7 +86,14 @@ service cloud.firestore {
              (!('declineReason' in data) || (data.declineReason is string && data.declineReason.size() < 200)) &&
              (!('repaymentDate' in data) || (data.repaymentDate is string && data.repaymentDate.size() < 20)) &&
              (!('repaymentAmount' in data) || (data.repaymentAmount is number && data.repaymentAmount > 0)) &&
-             (!('lastReminderSent' in data) || (data.lastReminderSent is string && data.lastReminderSent.size() < 50));
+             (!('lastReminderSent' in data) || (data.lastReminderSent is string && data.lastReminderSent.size() < 50)) &&
+             data.applicationNumber is number && data.applicationNumber > 0;
+    }
+
+    match /counters/{counterId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1;
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count']) && request.resource.data.count == resource.data.count + 1;
     }
 
     match /users/{userId} {

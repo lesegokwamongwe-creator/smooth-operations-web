@@ -125,6 +125,17 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "notificationPreferences": {
+          "type": "object",
+          "properties": {
+            "email": { "type": "boolean" },
+            "sms": { "type": "boolean" },
+            "newApplications": { "type": "boolean" },
+            "highValueLoans": { "type": "boolean" },
+            "overduePayments": { "type": "boolean" },
+            "highValueThreshold": { "type": "number" }
+          }
         }
       },
       "required": ["uid", "email", "role", "createdAt"]

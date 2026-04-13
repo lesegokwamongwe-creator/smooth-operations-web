@@ -138,7 +138,17 @@ export default function LoanOptions() {
             <div className="bg-slate-900 p-8 md:p-12 text-white flex flex-col justify-center">
               <div className="space-y-6">
                 <div>
-                  <p className="text-slate-400 font-medium mb-1">Total Repayment Amount</p>
+                  <div className="flex items-center gap-2 mb-1 group relative">
+                    <p className="text-slate-400 font-medium">Total Repayment Amount</p>
+                    <div className="cursor-help text-slate-500 hover:text-slate-300 transition-colors">
+                      <Info className="w-4 h-4" />
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-0 mb-2 w-64 p-3 bg-slate-800 text-slate-200 text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 border border-slate-700">
+                      Calculated as the principal amount plus 40% interest (R40 for every R100 borrowed). The total is due exactly 31 days from approval.
+                      <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                    </div>
+                  </div>
                   <div className="text-5xl font-extrabold text-emerald-400 tracking-tight">
                     R {results.totalRepayment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>

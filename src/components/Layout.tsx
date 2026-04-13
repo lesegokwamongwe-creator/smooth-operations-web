@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Menu, X, ChevronRight, LogOut } from "lucide-react";
+import { Menu, X, ChevronRight, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../lib/utils";
 import Logo from "./Logo";
@@ -68,12 +68,20 @@ export default function Layout() {
               )}
               <div className="flex items-center gap-3 border-l border-slate-200 pl-8 ml-2">
                 {user && (
-                  <button
-                    onClick={logOut}
-                    className="text-sm font-medium text-slate-600 hover:text-red-600 transition-colors flex items-center gap-1"
-                  >
-                    <LogOut className="w-4 h-4" /> Sign Out
-                  </button>
+                  <>
+                    <Link
+                      to="/settings"
+                      className="text-sm font-medium text-slate-600 hover:text-emerald-600 transition-colors flex items-center gap-1"
+                    >
+                      <Settings className="w-4 h-4" /> Settings
+                    </Link>
+                    <button
+                      onClick={logOut}
+                      className="text-sm font-medium text-slate-600 hover:text-red-600 transition-colors flex items-center gap-1"
+                    >
+                      <LogOut className="w-4 h-4" /> Sign Out
+                    </button>
+                  </>
                 )}
                 <Link
                   to="/apply"
@@ -135,15 +143,24 @@ export default function Layout() {
               )}
               <div className="pt-4 px-3 space-y-3">
                 {user && (
-                  <button
-                    onClick={() => {
-                      logOut();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg font-medium transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" /> Sign Out
-                  </button>
+                  <>
+                    <Link
+                      to="/settings"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="w-full flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <Settings className="w-4 h-4" /> Settings
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logOut();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full flex justify-center items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-lg font-medium transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" /> Sign Out
+                    </button>
+                  </>
                 )}
                 <Link
                   to="/apply"

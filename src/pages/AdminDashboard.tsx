@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../lib/AuthContext";
 import { db } from "../lib/firebase";
-import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField, limit } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, updateDoc, orderBy, deleteField, limit, getDoc } from "firebase/firestore";
 import { handleFirestoreError, OperationType } from "../lib/firestoreUtils";
-import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle, Landmark, CreditCard, Users } from "lucide-react";
+import { ShieldCheck, Loader2, Search, CheckCircle, XCircle, Clock, FileText, Calendar, Mail, MessageSquare, Send, Eye, Download, MessageCircle, Landmark, CreditCard, Users, Settings as SettingsIcon, Save } from "lucide-react";
 import { motion } from "motion/react";
 
 export default function AdminDashboard() {
@@ -17,9 +17,21 @@ export default function AdminDashboard() {
   const [declineReason, setDeclineReason] = useState("");
   const [repaymentDate, setRepaymentDate] = useState("");
   const [repaymentAmount, setRepaymentAmount] = useState("");
-  const [activeTab, setActiveTab] = useState<'applications' | 'reminders' | 'payouts' | 'clients'>('applications');
+  const [activeTab, setActiveTab] = useState<'applications' | 'reminders' | 'payouts' | 'clients' | 'settings'>('applications');
   const [loadLimit, setLoadLimit] = useState(50);
   const [hasMore, setHasMore] = useState(true);
+  const [adminPrefs, setAdminPrefs] = useState({
+    newApplications: true,
+    highValueLoans: false,
+    overduePayments: false,
+    highValueThreshold: 10000
+  });
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+  const adminPrefsRef = useRef(adminPrefs);
+
+  useEffect(() => {
+    adminPrefsRef.current = adminPrefs;
+  }, [adminPrefs]);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -30,6 +42,36 @@ export default function AdminDashboard() {
   } | null>(null);
 
   const isAdmin = role === 'admin';
+
+  const isFirstSnapshot = useRef(true);
+  const [notificationPermission, setNotificationPermission] = useState(
+    'Notification' in window ? Notification.permission : 'denied'
+  );
+
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return;
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+  };
+
+  useEffect(() => {
+    if (isAdmin && notificationPermission === 'default') {
+      requestNotificationPermission();
+    }
+  }, [isAdmin, notificationPermission]);
+
+  useEffect(() => {
+    if (isAdmin && user) {
+      getDoc(doc(db, "users", user.uid)).then(docSnap => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.notificationPreferences) {
+            setAdminPrefs(prev => ({ ...prev, ...data.notificationPreferences }));
+          }
+        }
+      }).catch(err => console.error("Failed to load admin prefs", err));
+    }
+  }, [isAdmin, user]);
 
   const clients = React.useMemo(() => {
     const clientMap = new Map<string, any>();
@@ -89,6 +131,52 @@ export default function AdminDashboard() {
 
     const q = query(collection(db, "applications"), orderBy("createdAt", "desc"), limit(loadLimit));
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      
+      if (!isFirstSnapshot.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const app = change.doc.data();
+            const name = app.firstName || app.name || 'A client';
+            const amount = app.loanAmount || app.amount || '';
+            
+            const prefs = adminPrefsRef.current;
+            
+            let shouldNotify = false;
+            let title = 'New Loan Application';
+            let body = `${name} just applied for a loan of R${amount}.`;
+            
+            if (prefs.newApplications) {
+              shouldNotify = true;
+            }
+            
+            if (prefs.highValueLoans && Number(amount) >= (prefs.highValueThreshold || 10000)) {
+              shouldNotify = true;
+              title = 'High Value Loan Application!';
+            }
+            
+            if (shouldNotify) {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                  body: body,
+                  icon: '/favicon.ico'
+                });
+              }
+              
+              // Play a subtle notification sound
+              try {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.volume = 0.5;
+                audio.play().catch(e => console.log('Audio play blocked by browser', e));
+              } catch (e) {
+                // Ignore audio errors
+              }
+            }
+          }
+        });
+      } else {
+        isFirstSnapshot.current = false;
+      }
+
       const apps = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -156,13 +244,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleProcessDebitOrder = (appId: string) => {
+  const handleSettleDebt = (appId: string) => {
     setConfirmDialog({
       isOpen: true,
-      title: "Process Debit Order",
-      message: "Are you sure you want to process this debit order? This action will mark the loan as 'Paid'.",
-      confirmText: "Process Debit",
-      confirmColor: "bg-slate-900 hover:bg-slate-800",
+      title: "Settle Debt",
+      message: "Are you sure you want to settle this debt? This action will mark the loan as 'Paid'.",
+      confirmText: "Settle Debt",
+      confirmColor: "bg-emerald-600 hover:bg-emerald-700",
       onConfirm: async () => {
         setConfirmDialog(null);
         setIsUpdating(true);
@@ -291,15 +379,30 @@ export default function AdminDashboard() {
             <p className="text-slate-600 mt-2">Manage applications and send repayment reminders.</p>
           </div>
           
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by ID, Name, or Mobile..."
-              className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-            />
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            {notificationPermission !== 'granted' && 'Notification' in window && (
+              <button
+                onClick={requestNotificationPermission}
+                className="hidden md:flex items-center gap-2 px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl text-sm font-medium hover:bg-emerald-200 transition-colors"
+                title="Enable browser notifications for new applications"
+              >
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                Enable Notifications
+              </button>
+            )}
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by ID, Name, or Mobile..."
+                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+              />
+            </div>
           </div>
         </div>
 
@@ -347,6 +450,17 @@ export default function AdminDashboard() {
           >
             <Users className="w-4 h-4" />
             Client Records
+          </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'settings' 
+                ? 'bg-emerald-600 text-white shadow-sm' 
+                : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
+            }`}
+          >
+            <SettingsIcon className="w-4 h-4" />
+            Settings
           </button>
         </div>
 
@@ -503,13 +617,13 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => handleProcessDebitOrder(app.id)}
+                              onClick={() => handleSettleDebt(app.id)}
                               disabled={isUpdating}
-                              className="inline-flex items-center justify-center px-4 h-10 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-colors text-sm font-medium gap-2 mr-2 disabled:bg-slate-400"
-                              title="Process Debit Order & Mark Paid"
+                              className="inline-flex items-center justify-center px-4 h-10 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-sm font-medium gap-2 mr-2 disabled:bg-slate-400 shadow-sm"
+                              title="Settle Debt & Mark Paid"
                             >
-                              <CreditCard className="w-4 h-4" />
-                              <span className="hidden md:inline">Process Debit</span>
+                              <CheckCircle className="w-4 h-4" />
+                              <span className="hidden md:inline">Settle Debt</span>
                             </button>
                             <a 
                               href={`mailto:${app.email}?subject=Loan Repayment Reminder&body=Dear ${app.name || app.firstName},%0D%0A%0D%0AThis is a friendly reminder from Smooth Operations that your loan repayment of R${app.repaymentAmount} is due on ${app.repaymentDate}.%0D%0A%0D%0AThank you!`}
@@ -787,6 +901,126 @@ export default function AdminDashboard() {
 
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden p-8">
+            <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+              <SettingsIcon className="w-6 h-6 text-slate-400" />
+              <h2 className="text-xl font-bold text-slate-900">Admin Notification Preferences</h2>
+            </div>
+            
+            <p className="text-slate-600 mb-8">
+              Configure which events trigger a browser notification and sound alert while the dashboard is open.
+            </p>
+
+            <div className="space-y-6">
+              {/* New Applications Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">New Applications</p>
+                    <p className="text-sm text-slate-500">Alert me when any new loan application is submitted</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={adminPrefs.newApplications}
+                    onChange={(e) => setAdminPrefs({ ...adminPrefs, newApplications: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {/* High Value Loans Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
+                    <Landmark className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900">High-Value Loans</p>
+                    <p className="text-sm text-slate-500">Alert me specifically for large loan requests</p>
+                    {adminPrefs.highValueLoans && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-sm text-slate-600">Threshold: R</span>
+                        <input 
+                          type="number" 
+                          value={adminPrefs.highValueThreshold}
+                          onChange={(e) => setAdminPrefs({ ...adminPrefs, highValueThreshold: Number(e.target.value) })}
+                          className="w-24 px-2 py-1 text-sm rounded border border-slate-300 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer self-start mt-2">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={adminPrefs.highValueLoans}
+                    onChange={(e) => setAdminPrefs({ ...adminPrefs, highValueLoans: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+              
+              {/* Overdue Payments Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">Overdue Payments</p>
+                    <p className="text-sm text-slate-500">Alert me when a payment becomes overdue (Coming soon)</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={adminPrefs.overduePayments}
+                    onChange={(e) => setAdminPrefs({ ...adminPrefs, overduePayments: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={async () => {
+                  if (!user) return;
+                  setIsSavingPrefs(true);
+                  try {
+                    await updateDoc(doc(db, "users", user.uid), {
+                      notificationPreferences: adminPrefs
+                    });
+                    alert("Preferences saved successfully!");
+                  } catch (error) {
+                    handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+                    alert("Failed to save preferences.");
+                  } finally {
+                    setIsSavingPrefs(false);
+                  }
+                }}
+                disabled={isSavingPrefs}
+                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-70"
+              >
+                {isSavingPrefs ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Preferences
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

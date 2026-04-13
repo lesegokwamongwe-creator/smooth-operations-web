@@ -13,6 +13,7 @@ import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import AdminDashboard from "./pages/AdminDashboard";
 import FinancialCoach from "./pages/FinancialCoach";
+import Settings from "./pages/Settings";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import ScrollToTop from "./components/ScrollToTop";
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="contact" element={<Contact />} />
               <Route path="coach" element={<FinancialCoach />} />
               <Route path="admin" element={<AdminDashboard />} />
+              <Route path="settings" element={<Settings />} />
               <Route path="terms" element={<Terms />} />
               <Route path="privacy" element={<Privacy />} />
             </Route>

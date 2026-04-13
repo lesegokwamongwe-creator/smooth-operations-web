@@ -51,11 +51,12 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'createdAt', 'notificationPreferences']) &&
              data.uid == request.auth.uid &&
              isValidEmail(data.email) &&
              data.role in ['user', 'admin'] &&
-             data.createdAt is timestamp;
+             data.createdAt is timestamp &&
+             (!('notificationPreferences' in data) || (data.notificationPreferences is map && data.notificationPreferences.keys().hasOnly(['email', 'sms', 'newApplications', 'highValueLoans', 'overduePayments', 'highValueThreshold'])));
     }
 
     function isValidChatMessage(data) {
@@ -66,28 +67,29 @@ service cloud.firestore {
     }
 
     function isValidApplication(data) {
-      return hasOnlyAllowedFields(['userId', 'name', 'firstName', 'lastName', 'idNumber', 'mobile', 'email', 'netIncome', 'loanAmount', 'amount', 'status', 'date', 'createdAt', 'bankName', 'accountNumber', 'accountType', 'payslipData', 'declineReason', 'repaymentDate', 'repaymentAmount', 'lastReminderSent', 'applicationNumber']) &&
+      return hasOnlyAllowedFields(['id', 'userId', 'name', 'firstName', 'lastName', 'idNumber', 'mobile', 'email', 'netIncome', 'loanAmount', 'amount', 'status', 'date', 'createdAt', 'bankName', 'accountNumber', 'accountType', 'payslipData', 'declineReason', 'repaymentDate', 'repaymentAmount', 'lastReminderSent', 'applicationNumber']) &&
              data.userId is string &&
+             (!('id' in data) || data.id is string) &&
              (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() < 100)) &&
              (!('firstName' in data) || (data.firstName is string && data.firstName.size() > 0 && data.firstName.size() < 100)) &&
              (!('lastName' in data) || (data.lastName is string && data.lastName.size() > 0 && data.lastName.size() < 100)) &&
              (!('idNumber' in data) || (data.idNumber is string && data.idNumber.matches("^\\d{13}$"))) &&
              data.mobile is string && data.mobile.size() > 0 && data.mobile.size() < 20 &&
              isValidEmail(data.email) && data.email.size() < 150 &&
-             (!('netIncome' in data) || (data.netIncome is number && data.netIncome > 0)) &&
-             (('loanAmount' in data && data.loanAmount is number && data.loanAmount > 0) || ('amount' in data && data.amount is number && data.amount > 0)) &&
+             (!('netIncome' in data) || (data.netIncome is number || data.netIncome is string)) &&
+             (('loanAmount' in data && (data.loanAmount is number || data.loanAmount is string)) || ('amount' in data && (data.amount is number || data.amount is string))) &&
              data.status in ['Pending Review', 'Approved', 'Declined', 'Paid'] &&
              data.date is string && data.date.size() > 0 && data.date.size() < 20 &&
-             data.createdAt is timestamp &&
+             (data.createdAt is timestamp || data.createdAt is string) &&
              (!('bankName' in data) || (data.bankName is string && data.bankName.size() > 0 && data.bankName.size() < 100)) &&
              (!('accountNumber' in data) || (data.accountNumber is string && data.accountNumber.size() > 0 && data.accountNumber.size() < 50)) &&
              (!('accountType' in data) || (data.accountType is string && data.accountType in ['Savings', 'Cheque', 'Transmission', 'Other'])) &&
-             (!('payslipData' in data) || (data.payslipData is string && data.payslipData.size() > 0 && data.payslipData.size() < 800000)) &&
-             (!('declineReason' in data) || (data.declineReason is string && data.declineReason.size() < 200)) &&
-             (!('repaymentDate' in data) || (data.repaymentDate is string && data.repaymentDate.size() < 20)) &&
-             (!('repaymentAmount' in data) || (data.repaymentAmount is number && data.repaymentAmount > 0)) &&
+             (!('payslipData' in data) || (data.payslipData is string && data.payslipData.size() > 0 && data.payslipData.size() < 1048576)) &&
+             (!('declineReason' in data) || (data.declineReason is string && data.declineReason.size() <= 1000)) &&
+             (!('repaymentDate' in data) || (data.repaymentDate is string && data.repaymentDate.size() < 50)) &&
+             (!('repaymentAmount' in data) || (data.repaymentAmount is number || data.repaymentAmount is string)) &&
              (!('lastReminderSent' in data) || (data.lastReminderSent is string && data.lastReminderSent.size() < 50)) &&
-             data.applicationNumber is number && data.applicationNumber > 0;
+             (!('applicationNumber' in data) || (data.applicationNumber is number || data.applicationNumber is string));
     }
 
     match /counters/{counterId} {

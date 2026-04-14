@@ -37,26 +37,21 @@ export default function Terms() {
             </p>
 
             <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">3. Specific Loan Terms</h2>
-            <ul className="list-none space-y-3 text-slate-600 mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-              <li className="flex items-start gap-3">
-                <span className="text-xl">🕒</span>
-                <span>Loan must be repaid in full by agreed date</span>
+            <ul className="list-disc pl-10 space-y-3 text-slate-600 mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              <li>
+                <strong>Repayment Schedule:</strong> The principal loan amount and all accrued interest must be repaid in full by the agreed-upon due date.
               </li>
-              <li className="flex items-start gap-3">
-                <span className="text-xl">📊</span>
-                <span>Interest is fixed and doesn't compound</span>
+              <li>
+                <strong>Interest Calculation:</strong> Interest is applied at a fixed rate and does not compound over the duration of the loan term.
               </li>
-              <li className="flex items-start gap-3">
-                <span className="text-xl">💸</span>
-                <span>Early repayment allowed without penalty</span>
+              <li>
+                <strong>Early Settlement:</strong> Borrowers are permitted to settle their outstanding loan balance prior to the due date without incurring any early repayment penalties.
               </li>
-              <li className="flex items-start gap-3">
-                <span className="text-xl">🚨</span>
-                <span>10% late fee if repayment is delayed</span>
+              <li>
+                <strong>Late Payment Penalties:</strong> A late fee equivalent to 10% of the outstanding balance will be levied if the repayment is not received by the stipulated deadline.
               </li>
-              <li className="flex items-start gap-3">
-                <span className="text-xl">🤝</span>
-                <span>All loans subject to Smooth Operations' approval</span>
+              <li>
+                <strong>Approval Discretion:</strong> All loan applications and disbursements are strictly subject to final review and approval by Smooth Operations.
               </li>
             </ul>
 

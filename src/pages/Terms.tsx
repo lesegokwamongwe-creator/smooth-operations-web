@@ -72,7 +72,7 @@ export default function Terms() {
 
             <h2 className="text-2xl font-bold text-slate-900 mt-8 mb-4">7. Contact Information</h2>
             <p className="text-slate-600 mb-6">
-              If you have any questions about these Terms, please contact us via our website at <a href="https://smoothoperations.netlify.app" target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:text-emerald-700 font-medium">smoothoperations.netlify.app</a>.
+              If you have any questions about these Terms, please contact the Smooth Operations support team. You can reach us through our official support channels or by visiting our home page.
             </p>
           </div>
         </motion.div>

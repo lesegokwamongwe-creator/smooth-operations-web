@@ -628,6 +628,8 @@ export default function AdminDashboard() {
                             <a 
                               href={`mailto:${app.email}?subject=Loan Repayment Reminder&body=Dear ${app.name || app.firstName},%0D%0A%0D%0AThis is a friendly reminder from Smooth Operations that your loan repayment of R${app.repaymentAmount} is due on ${app.repaymentDate}.%0D%0A%0D%0AThank you!`}
                               onClick={() => handleSendReminder(app.id, 'email')}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                               title="Send Email Reminder"
                             >
@@ -636,6 +638,8 @@ export default function AdminDashboard() {
                             <a 
                               href={`sms:${app.mobile}?body=Smooth Operations: Dear ${app.name || app.firstName}, your loan repayment of R${app.repaymentAmount} is due on ${app.repaymentDate}.`}
                               onClick={() => handleSendReminder(app.id, 'sms')}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
                               title="Send SMS Reminder"
                             >
